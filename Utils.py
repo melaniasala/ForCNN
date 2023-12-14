@@ -53,3 +53,35 @@ def normalize_window(windows_batch, return_minmax= False):
         return scaled_batch, minmax_batch_array
     else:
         return scaled_batch
+    
+
+
+def inverse_normalize_window(windows_batch, minmax_batch_array):
+    """
+    Inverse normalize a batch of time series windows using the provided min-max array.
+
+    Parameters:
+    - windows_batch (numpy.ndarray):    A batch of time series windows with shape (batch_size, window_length, 1)
+                                        or (window_length, 1) for a single sample in the batch.
+    - minmax_batch_array (numpy.ndarray): An array containing the min and max values for each sample in the batch.
+                                        Shape is (batch_size, 2) for multiple samples or (2,) for a single sample.
+
+    Returns:
+    - numpy.ndarray: The inverse normalized batch.
+
+    """
+    single_sample = False
+    if len(windows_batch.shape) == 1:
+        single_sample = True
+
+    # Squeeze last dimension
+    windows_batch = np.squeeze(windows_batch)
+    batch_size = len(windows_batch)
+
+    # Inverse min-max scaling for each sample
+    if single_sample:
+        inverse_scaled_batch = minmax_batch_array[0] + (windows_batch * (minmax_batch_array[1] - minmax_batch_array[0]))
+    else:
+        inverse_scaled_batch = np.array([minmax_batch_array[i, 0] + (windows_batch[i] * (minmax_batch_array[i, 1] - minmax_batch_array[i, 0])) for i in range(batch_size)])
+
+    return inverse_scaled_batch
