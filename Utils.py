@@ -56,6 +56,7 @@ def normalize_window(windows_batch, return_minmax= False):
     
 
 
+
 def inverse_normalize_window(windows_batch, minmax_batch_array):
     """
     Inverse normalize a batch of time series windows using the provided min-max array.
@@ -88,24 +89,14 @@ def inverse_normalize_window(windows_batch, minmax_batch_array):
 
 
 
-class timeseries_to_image_layer(tfkl.Layer):
+class TimeSeriesToImageLayer(tfkl.Layer):
     def __init__(self):
-        super(timeseries_to_image_layer, self).__init__()
+        super(TimeSeriesToImageLayer, self).__init__()
 
     def timeseries_to_image(self, timeseries_tensor):
-        """
-        Converts an array of windows into a tensor of rgb images
-        
-        Parameters:
-
-            - timeseries_tensor is a keras tensor of shape(number of time_series, number of values in the timeseries)
-        
-        returns:
-
-            - tensor shaped (num_images,height,width,num_channels)
-        """
         images = []
         timeseries_array = timeseries_tensor.numpy()
+
         for window in timeseries_array:
             fig, ax = plt.subplots(facecolor='black')
             ax.plot(window, color='white', linewidth=0.8)
@@ -128,8 +119,123 @@ class timeseries_to_image_layer(tfkl.Layer):
             img_rgb = np.stack((img_gray, img_gray, img_gray), axis=-1)
             images.append(img_rgb)
             plt.close(fig)  # Close the figure
-
-        return np.array(images)
+            
+        images_array = np.array(images)
+        images_tensor = tf.convert_to_tensor(images_array, dtype=tf.float32)
+        return images_tensor
 
     def call(self, inputs):
-        return tf.convert_to_tensor(self.timeseries_to_image(inputs))
+        images = tf.py_function(self.timeseries_to_image, [inputs], tf.float32)
+        return images
+
+'''
+IDEA:
+
+class NormalizeWindowLayer(tfkl.Layer):
+    def __init__(self, return_minmax=False):
+        super(NormalizeWindowLayer, self).__init__()
+        self.return_minmax = return_minmax
+
+    def normalize_window(self, windows_batch):
+        single_sample = False
+        if len(windows_batch.shape) == 2:
+            single_sample = True
+
+        # Squeeze last dimension
+        windows_batch = np.squeeze(windows_batch)
+        batch_size = len(windows_batch)
+
+        # For each sample compute min and max value
+        if single_sample:
+            minmax_batch_array = np.array([[np.min(windows_batch)], [np.max(windows_batch)]])
+        else:
+            minmax_batch_array = np.array([[np.min(windows_batch[i]), np.max(windows_batch[i])] for i in range(batch_size)])
+
+        # Perform min-max scaling for each sample
+        if single_sample:
+            scaled_batch = np.array([(windows_batch - minmax_batch_array[0]) / (minmax_batch_array[1] - minmax_batch_array[0])])
+        else:
+            scaled_batch = np.array([(windows_batch[i] - minmax_batch_array[i, 0]) / (minmax_batch_array[i, 1] - minmax_batch_array[i, 0]) for i in range(batch_size)])
+
+        # Return results as Keras tensors
+        scaled_batch = tf.convert_to_tensor(scaled_batch, dtype=tf.float32)
+        minmax_batch_array = tf.convert_to_tensor(minmax_batch_array, dtype=tf.float32)
+
+        if self.return_minmax:
+            return scaled_batch, minmax_batch_array
+        else:
+            return scaled_batch
+
+    def call(self, inputs):
+        scaled_batch, minmax_batch_array = tf.py_function(
+            self.normalize_window,
+            [inputs],
+            [tf.float32, tf.float32] if self.return_minmax else tf.float32
+        )
+        
+        return (scaled_batch, minmax_batch_array) if self.return_minmax else scaled_batch
+
+        
+
+class InverseNormalizeWindowLayer(tfkl.Layer):
+    def inverse_normalize_window(self, windows_batch, minmax_batch_array):
+        single_sample = False
+        if len(windows_batch.shape) == 1:
+            single_sample = True
+
+        # Squeeze last dimension
+        windows_batch = np.squeeze(windows_batch)
+        batch_size = len(windows_batch)
+
+        # Inverse min-max scaling for each sample
+        if single_sample:
+            inverse_scaled_batch = minmax_batch_array[0] + (windows_batch * (minmax_batch_array[1] - minmax_batch_array[0]))
+        else:
+            inverse_scaled_batch = np.array([minmax_batch_array[i, 0] + (windows_batch[i] * (minmax_batch_array[i, 1] - minmax_batch_array[i, 0])) for i in range(batch_size)])
+
+        # Convert result to TensorFlow tensor
+        inverse_scaled_batch = tf.convert_to_tensor(inverse_scaled_batch, dtype=tf.float32)
+
+        return inverse_scaled_batch
+
+    def call(self, inputs):
+        # Assuming inputs is a tuple (windows_batch, minmax_batch_array)
+        inverse_scaled_batch = tf.py_function(
+            self.inverse_normalize_window,
+            inputs,
+            tf.float32
+        )
+
+        return inverse_scaled_batch
+
+
+def build_image_based_forecasting(input_shape=(window)):
+
+    tf.random.set_seed(seed)
+    inputs = tfk.Input(shape=input_shape)
+    images = TimeSeriesToImageLayer()(inputs)
+    
+
+    ### Guarda come usare i layer di normalizzazione :))
+    dopo ti do i bacini sulla patata 8----D 
+
+    x1 = mobilenet(images)
+    x2 = tfkl.GlobalAveragePooling2D(name="avg_pool")(x1)
+    norm = tfkl.BatchNormalization(name="batch_normalization")(x2)
+
+    # Add a Dense layer with 2 units and softmax activation as the classifier
+    intermediate1 = tfkl.Dense(1024, activation=tf.keras.activations.swish)(norm)
+
+    outputs = tfkl.Dense(9, activation='linear')(intermediate1)
+
+    # Create a Model connecting input and output
+    model = tfk.Model(inputs=inputs, outputs=outputs, name='model')
+
+    # Compile the model with Categorical Cross-Entropy loss and Adam optimizer
+    optimizer = tf.keras.optimizers.AdamW()
+    model.compile(loss=tfk.losses.MeanSquaredError(), optimizer=optimizer)
+
+    # Return the model
+    return model
+    
+'''
