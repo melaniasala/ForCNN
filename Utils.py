@@ -128,13 +128,15 @@ class TimeSeriesToImageLayer(tfkl.Layer):
         images = tf.py_function(self.timeseries_to_image, [inputs], tf.float32)
         return images
 
-'''
-IDEA:
+
+
+
 
 class NormalizeWindowLayer(tfkl.Layer):
     def __init__(self, return_minmax=False):
         super(NormalizeWindowLayer, self).__init__()
         self.return_minmax = return_minmax
+
 
     def normalize_window(self, windows_batch):
         single_sample = False
@@ -165,6 +167,7 @@ class NormalizeWindowLayer(tfkl.Layer):
             return scaled_batch, minmax_batch_array
         else:
             return scaled_batch
+        
 
     def call(self, inputs):
         scaled_batch, minmax_batch_array = tf.py_function(
@@ -176,6 +179,7 @@ class NormalizeWindowLayer(tfkl.Layer):
         return (scaled_batch, minmax_batch_array) if self.return_minmax else scaled_batch
 
         
+
 
 class InverseNormalizeWindowLayer(tfkl.Layer):
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
@@ -197,6 +201,7 @@ class InverseNormalizeWindowLayer(tfkl.Layer):
         inverse_scaled_batch = tf.convert_to_tensor(inverse_scaled_batch, dtype=tf.float32)
 
         return inverse_scaled_batch
+    
 
     def call(self, inputs):
         # Assuming inputs is a tuple (windows_batch, minmax_batch_array)
@@ -207,35 +212,3 @@ class InverseNormalizeWindowLayer(tfkl.Layer):
         )
 
         return inverse_scaled_batch
-
-
-def build_image_based_forecasting(input_shape=(window)):
-
-    tf.random.set_seed(seed)
-    inputs = tfk.Input(shape=input_shape)
-    images = TimeSeriesToImageLayer()(inputs)
-    
-
-    ### Guarda come usare i layer di normalizzazione :))
-    dopo ti do i bacini sulla patata 8----D 
-
-    x1 = mobilenet(images)
-    x2 = tfkl.GlobalAveragePooling2D(name="avg_pool")(x1)
-    norm = tfkl.BatchNormalization(name="batch_normalization")(x2)
-
-    # Add a Dense layer with 2 units and softmax activation as the classifier
-    intermediate1 = tfkl.Dense(1024, activation=tf.keras.activations.swish)(norm)
-
-    outputs = tfkl.Dense(9, activation='linear')(intermediate1)
-
-    # Create a Model connecting input and output
-    model = tfk.Model(inputs=inputs, outputs=outputs, name='model')
-
-    # Compile the model with Categorical Cross-Entropy loss and Adam optimizer
-    optimizer = tf.keras.optimizers.AdamW()
-    model.compile(loss=tfk.losses.MeanSquaredError(), optimizer=optimizer)
-
-    # Return the model
-    return model
-    
-'''
