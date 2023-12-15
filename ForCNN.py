@@ -1,39 +1,39 @@
 import tensorflow as tf
 from tensorflow import keras as tfk
 from tensorflow.keras import layers as tfkl
-from io import BytesIO
-import pandas as pd
-import seaborn as sns
-import numpy as np
+# from io import BytesIO
+# import pandas as pd
+# import seaborn as sns
+# import numpy as np
 
 
 from Utils import NormalizeWindowLayer, InverseNormalizeWindowLayer, TimeSeriesToImageLayer
 
 
 
-class SDConvBlock(tf.keras.layers.Layer):
+class SDConvBlock(tfkl.Layer):
     def __init__(self, filters, name):
         super(SDConvBlock, self).__init__(name=name)
 
         # First convolutional layer
-        self.conv1 = tf.keras.layers.Conv2D(filters, (3, 3), padding='same', name=f'{name}_conv1')
-        self.batch_norm1 = tf.keras.layers.BatchNormalization(name=f'{name}_batch_norm1')
-        self.relu1 = tf.keras.layers.ReLU(name=f'{name}_relu1')
+        self.conv1 =tfkl.Conv2D(filters, (3, 3), padding='same', name=f'{name}_conv1')
+        self.batch_norm1 = tfkl.BatchNormalization(name=f'{name}_batch_norm1')
+        self.relu1 = tfkl.ReLU(name=f'{name}_relu1')
 
         # Second convolutional layer
-        self.conv2 = tf.keras.layers.Conv2D(filters, (3, 3), padding='same', name=f'{name}_conv2')
-        self.batch_norm2 = tf.keras.layers.BatchNormalization(name=f'{name}_batch_norm2')
-        self.relu2 = tf.keras.layers.ReLU(name=f'{name}_relu2')
+        self.conv2 = tfkl.Conv2D(filters, (3, 3), padding='same', name=f'{name}_conv2')
+        self.batch_norm2 = tfkl.BatchNormalization(name=f'{name}_batch_norm2')
+        self.relu2 = tfkl.ReLU(name=f'{name}_relu2')
 
         # Third convolutional layer
-        self.conv3 = tf.keras.layers.Conv2D(filters, (3, 3), padding='same', name=f'{name}_conv3')
-        self.batch_norm3 = tf.keras.layers.BatchNormalization(name=f'{name}_batch_norm3')
+        self.conv3 = tfkl.Conv2D(filters, (3, 3), padding='same', name=f'{name}_conv3')
+        self.batch_norm3 = tfkl.BatchNormalization(name=f'{name}_batch_norm3')
 
         # Identity shortcut connection
-        self.add = tf.keras.layers.Add(name=f'{name}_add')
+        self.add = tfkl.Add(name=f'{name}_add')
 
         # Final ReLU activation
-        self.relu_out = tf.keras.layers.ReLU(name=f'{name}_relu_out')
+        self.relu_out = tfkl.ReLU(name=f'{name}_relu_out')
 
     def call(self, inputs):
         # Forward pass through the convolutional block
@@ -59,7 +59,7 @@ class SDConvBlock(tf.keras.layers.Layer):
 
 
 
-class SDStack(tf.keras.layers.Layer):
+class SDStack(tfkl.Layer):
     def __init__(self, filters, num_blocks, name):
         super(SDStack, self).__init__(name=name)
 
@@ -67,7 +67,7 @@ class SDStack(tf.keras.layers.Layer):
         self.blocks = [SDConvBlock(filters, f'{name}_block_{i+1}') for i in range(num_blocks)]
 
         # Final convolution layer for reducing spatial size
-        self.final_conv = tf.keras.layers.Conv2D(filters, (2, 2), strides=(2, 2), padding='valid', name=f'{name}_final_conv')
+        self.final_conv = tfkl.Conv2D(filters, (2, 2), strides=(2, 2), padding='valid', name=f'{name}_final_conv')
 
 
     def call(self, inputs):
@@ -75,11 +75,13 @@ class SDStack(tf.keras.layers.Layer):
         x = inputs
         for block in self.blocks:
             x = block(x)
+        
+        x = self.final_conv(x)
         return x
     
 
 
-class SDNetwork(tf.keras.layers.Layer):
+class SDNetwork(tfkl.Layer):
     def __init__(self, input_shape, name='SDNetwork'):
         super(SDNetwork, self).__init__(name=name)
 
@@ -91,10 +93,10 @@ class SDNetwork(tf.keras.layers.Layer):
         self.stacks = [SDStack(filters * 2**i, num_blocks_per_stack, f'stack_{i+1}') for i in range(num_stacks)]
 
         # Concatenate feature maps from all stacks
-        self.concat = tf.keras.layers.Concatenate(axis=-1, name='concatenate')
+        self.concat = tfkl.Concatenate(axis=-1, name='concatenate')
 
         # Flatten the concatenated feature maps
-        self.flatten = tf.keras.layers.Flatten(name='flatten')
+        self.flatten = tfkl.Flatten(name='flatten')
 
 
 
@@ -117,34 +119,35 @@ class ForCNN(tf.keras.Model):
             raise ValueError(f"Unsupported cnn_type: {cnn_type}. Choose from 'ResNet', 'VGG', or 'SD'.")
 
         # Define pre-processing layers
-        self.inputs = tfk.Input(shape=(window, 1), name="input") # TODO: check input shape. No 1 at the end! fix also layer for normalization
-        self.normalize_window = NormalizeWindowLayer(return_minmax= True, name="normalize_window")
-        self.to_images = TimeSeriesToImageLayer(name="time_series_to_image")
+        self.inputs = tfk.Input(shape=(window), name="input") # TODO: check input shape. No 1 at the end! fix also layer for normalization
+        self.normalize_window = NormalizeWindowLayer(return_minmax= True)
+        self.to_images = TimeSeriesToImageLayer()
 
         # CNN layers already defined
 
-        self.global_average_pooling =  tf.keras.layers.GlobalAveragePooling2D(name="global_avg_pool")
-        self.batch_normalization =  tf.keras.layers.BatchNormalization(name="batch_normalization")
+        self.global_average_pooling =  tfkl.GlobalAveragePooling2D(name="global_avg_pool")
+        self.batch_normalization =  tfkl.BatchNormalization(name="batch_normalization")
 
         # Define fully connected layers
         # TODO: fix number of neurons
-        self.dense1 = tf.keras.layers.Dense(1024, activation=tf.keras.activations.swish, name="dense1") # TODO: swish only for classification...?
-        self.dense2 = tf.keras.layers.Dense(1024, activation=tf.keras.activations.swish, name="dense2") 
-        self.dense_output = tf.keras.layers.Dense(self.telescope, activation='linear', name="dense_output") 
+        self.dense1 = tfkl.Dense(1024, activation=tf.keras.activations.swish, name="dense1") # TODO: swish only for classification...?
+        self.dense2 = tfkl.Dense(512, activation=tf.keras.activations.swish, name="dense2") 
+        self.dense3 = tfkl.Dense(128, activation=tf.keras.activations.swish, name="dense3") 
+        self.dense_output = tfkl.Dense(self.telescope, activation='linear', name="dense_output") 
         # in the paper:
-        # self.dense1 = tf.keras.layers.Dense(1024, activation=tf.keras.activations.relu, name="dense_fc1")
-        # self.dense2 = tf.keras.layers.Dense(1024, activation=tf.keras.activations.relu, name="dense_fc2")
-        # self.dense_output = tf.keras.layers.Dense(self.telescope, activation='linear', name="dense_output")
+        # self.dense1 = tfkl.Dense(1024, activation=tf.keras.activations.relu, name="dense_fc1")
+        # self.dense2 = tfkl.Dense(1024, activation=tf.keras.activations.relu, name="dense_fc2")
+        # self.dense_output = tfkl.Dense(self.telescope, activation='linear', name="dense_output")
 
 
         # Define post-processing layers
-        self.denormalize_window = InverseNormalizeWindowLayer(name="denormalize_window")
+        self.denormalize_window = InverseNormalizeWindowLayer()
 
 
     def call(self, inputs):
         # Define the forward pass in the call method
         x = self.inputs(inputs) #??
-        x = self.normalize_window(x)
+        x, min_max = self.normalize_window(x)
         x = self.to_images(x)
         x = self.cnn(x)
         x = self.global_average_pooling(x)
@@ -152,6 +155,6 @@ class ForCNN(tf.keras.Model):
         x = self.dense1(x)
         x = self.dense2(x)
         x = self.dense_output(x)
-        output = self.denormalize_window(x)
+        output = self.denormalize_window(x,min_max)
 
         return output   

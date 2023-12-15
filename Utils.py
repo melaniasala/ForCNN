@@ -17,8 +17,8 @@ def normalize_window(windows_batch, return_minmax= False):
     Normalize a batch of time series windows using min-max scaling.
 
     Parameters:
-    - windows_batch (numpy.ndarray):    A batch of time series windows with shape (batch_size, window_length, 1)
-                                        or (window_length, 1) for a single sample in the batch.
+    - windows_batch (numpy.ndarray):    A batch of time series windows with shape (batch_size, window_length)
+                                        or (window_length) for a single sample in the batch.
     - return_minmax (bool, optional):   If True, return both the scaled batch and the min-max array for each sample.
                                         If False, return only the scaled batch. Default is False.
 
@@ -29,11 +29,9 @@ def normalize_window(windows_batch, return_minmax= False):
     """
 
     single_sample = False
-    if len(windows_batch.shape) == 2:
+    if len(windows_batch.shape) == 1:
         single_sample = True
 
-    # Squeeze last dimension
-    windows_batch = np.squeeze(windows_batch)
     batch_size = len(windows_batch)
 
     # For each sample compute min and max value
@@ -75,8 +73,6 @@ def inverse_normalize_window(windows_batch, minmax_batch_array):
     if len(windows_batch.shape) == 1:
         single_sample = True
 
-    # Squeeze last dimension
-    windows_batch = np.squeeze(windows_batch)
     batch_size = len(windows_batch)
 
     # Inverse min-max scaling for each sample
@@ -90,8 +86,8 @@ def inverse_normalize_window(windows_batch, minmax_batch_array):
 
 
 class TimeSeriesToImageLayer(tfkl.Layer):
-    def __init__(self):
-        super(TimeSeriesToImageLayer, self).__init__()
+    def __init__(self, name = 'TimeSeriesToImageLayer'):
+        super(TimeSeriesToImageLayer, self).__init__(name = name)
 
     def timeseries_to_image(self, timeseries_tensor):
         images = []
@@ -133,8 +129,8 @@ class TimeSeriesToImageLayer(tfkl.Layer):
 
 
 class NormalizeWindowLayer(tfkl.Layer):
-    def __init__(self, return_minmax=False):
-        super(NormalizeWindowLayer, self).__init__()
+    def __init__(self,name = 'NormalizeWindowLayer' , return_minmax=False):
+        super(NormalizeWindowLayer, self).__init__(name = name)
         self.return_minmax = return_minmax
 
 
@@ -181,7 +177,11 @@ class NormalizeWindowLayer(tfkl.Layer):
         
 
 
-class InverseNormalizeWindowLayer(tfkl.Layer):
+class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
+    
+    def __init__(self,name = 'InverseNormalizeWindowLayer' ):
+        super(NormalizeWindowLayer, self).__init__(name = name)
+
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
         single_sample = False
         if len(windows_batch.shape) == 1:
@@ -202,12 +202,12 @@ class InverseNormalizeWindowLayer(tfkl.Layer):
 
         return inverse_scaled_batch
     
-
     def call(self, inputs):
-        # Assuming inputs is a tuple (windows_batch, minmax_batch_array)
+        windows_batch, minmax_batch_array = inputs
+
         inverse_scaled_batch = tf.py_function(
             self.inverse_normalize_window,
-            inputs,
+            [windows_batch, minmax_batch_array],
             tf.float32
         )
 
