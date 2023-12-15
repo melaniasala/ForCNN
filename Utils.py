@@ -180,7 +180,7 @@ class NormalizeWindowLayer(tfkl.Layer):
 class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
     
     def __init__(self,name = 'InverseNormalizeWindowLayer' ):
-        super(NormalizeWindowLayer, self).__init__(name = name)
+        super(InverseNormalizeWindowLayer, self).__init__(name = name)
 
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
         single_sample = False
