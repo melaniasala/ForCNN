@@ -129,10 +129,21 @@ class TimeSeriesToImageLayer(tfkl.Layer):
 
 
 class NormalizeWindowLayer(tfkl.Layer):
-    def __init__(self, ForCNNinstance, name = 'NormalizeWindowLayer'):
+    def __init__(self, name = 'NormalizeWindowLayer'):
         super(NormalizeWindowLayer, self).__init__(name = name)
-        self.ForCNNinstance = ForCNNinstance
-        self.min_max = self.ForCNNinstance.minmax_array
+
+    def set_model_instance(self, model_instance):
+        self.model_instance = model_instance
+        self.min_max = self.model_instance.minmax_array
+
+
+    def update_minmax_array(self):
+        # Access and modify the model attribute as needed
+        if hasattr(self.model_instance, 'minmax_array'):
+            self.model_instance.minmax_array = self.min_max
+        else:
+            # Handle the case where the attribute doesn't exist yet
+            print("Warning: 'minmax_array' not found in the model.")
 
 
     def normalize_window(self, windows_batch):
@@ -177,7 +188,12 @@ class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
         
     def __init__(self, ForCNNinstance, name = 'InverseNormalizeWindowLayer'):
         super(InverseNormalizeWindowLayer, self).__init__(name = name)
-        self.min_max = ForCNNinstance.minmax_array
+
+    
+    def set_model_instance(self, model_instance):
+        self.model_instance = model_instance
+        self.min_max = self.model_instance.minmax_array
+
 
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
         single_sample = False
