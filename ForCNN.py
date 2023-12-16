@@ -7,7 +7,7 @@ from tensorflow.keras import layers as tfkl
 # import numpy as np
 
 
-from Utils import NormalizeWindowLayer, InverseNormalizeWindowLayer, TimeSeriesToImageLayer
+from Utils import TimeSeriesToImageLayer, NormalizeWindowLayer, InverseNormalizeWindowLayer
 
 
 
@@ -107,20 +107,23 @@ class ForCNN(tf.keras.Model):
 
         self.telescope = telescope
         self.window = window
+        self.minmax_array = None
 
         # Choose the CNN architecture based on the input string
         if cnn_type == 'ResNet':
             self.cnn = tf.keras.applications.ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+            self.cnn.trainable = False
         elif cnn_type == 'VGG':
             self.cnn = tf.keras.applications.VGG19(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+            self.cnn.trainable = False
         elif cnn_type == 'SD':
             self.cnn = SDNetwork(input_shape=(224, 224, 3), name='SDNetwork')
         else:
             raise ValueError(f"Unsupported cnn_type: {cnn_type}. Choose from 'ResNet', 'VGG', or 'SD'.")
 
         # Define pre-processing layers
-        self.inputs = tfk.Input(shape=(window), name="input") # TODO: check input shape. No 1 at the end! fix also layer for normalization
-        self.normalize_window = NormalizeWindowLayer(return_minmax= True)
+        self.inputs = tfk.Input(shape=(window,), name="input") # TODO: check input shape. No 1 at the end! fix also layer for normalization
+        self.normalize_window = NormalizeWindowLayer(ForCNNinstance= self)
         self.to_images = TimeSeriesToImageLayer()
 
         # CNN layers already defined
@@ -141,13 +144,13 @@ class ForCNN(tf.keras.Model):
 
 
         # Define post-processing layers
-        self.denormalize_window = InverseNormalizeWindowLayer()
+        self.denormalize_window = InverseNormalizeWindowLayer(ForCNNinstance= self)
 
 
     def call(self, inputs):
         # Define the forward pass in the call method
-        x = self.inputs(inputs) #??
-        x, min_max = self.normalize_window(x)
+        x = self.inputs#(inputs) 
+        x = self.normalize_window(x)
         x = self.to_images(x)
         x = self.cnn(x)
         x = self.global_average_pooling(x)
@@ -155,6 +158,10 @@ class ForCNN(tf.keras.Model):
         x = self.dense1(x)
         x = self.dense2(x)
         x = self.dense_output(x)
-        output = self.denormalize_window(x,min_max)
+        output = self.denormalize_window(x)
 
         return output   
+    
+
+
+    

@@ -129,19 +129,19 @@ class TimeSeriesToImageLayer(tfkl.Layer):
 
 
 class NormalizeWindowLayer(tfkl.Layer):
-    def __init__(self,name = 'NormalizeWindowLayer' , return_minmax=False):
+    def __init__(self, ForCNNinstance, name = 'NormalizeWindowLayer'):
         super(NormalizeWindowLayer, self).__init__(name = name)
-        self.return_minmax = return_minmax
+        self.ForCNNinstance = ForCNNinstance
+        self.min_max = self.ForCNNinstance.minmax_array
 
 
     def normalize_window(self, windows_batch):
         single_sample = False
-        if len(windows_batch.shape) == 2:
+        if len(windows_batch.shape) == 1:
             single_sample = True
-
-        # Squeeze last dimension
-        windows_batch = np.squeeze(windows_batch)
-        batch_size = len(windows_batch)
+            batch_size = 1
+        else:
+            batch_size = len(windows_batch)
 
         # For each sample compute min and max value
         if single_sample:
@@ -157,39 +157,37 @@ class NormalizeWindowLayer(tfkl.Layer):
 
         # Return results as Keras tensors
         scaled_batch = tf.convert_to_tensor(scaled_batch, dtype=tf.float32)
-        minmax_batch_array = tf.convert_to_tensor(minmax_batch_array, dtype=tf.float32)
+        self.minmax_array = tf.convert_to_tensor(minmax_batch_array, dtype=tf.float32)
+        self.ForCNNinstance.minmax_array = self.minmax_array
 
-        if self.return_minmax:
-            return scaled_batch, minmax_batch_array
-        else:
-            return scaled_batch
-        
+        return scaled_batch
+            
 
     def call(self, inputs):
-        scaled_batch, minmax_batch_array = tf.py_function(
+        scaled_batch = tf.py_function(
             self.normalize_window,
             [inputs],
-            [tf.float32, tf.float32] if self.return_minmax else tf.float32
+            tf.float32
         )
-        
-        return (scaled_batch, minmax_batch_array) if self.return_minmax else scaled_batch
-
-        
+            
+        return scaled_batch
 
 
 class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
-    
-    def __init__(self,name = 'InverseNormalizeWindowLayer' ):
+        
+    def __init__(self, ForCNNinstance, name = 'InverseNormalizeWindowLayer'):
         super(InverseNormalizeWindowLayer, self).__init__(name = name)
+        self.min_max = ForCNNinstance.minmax_array
 
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
         single_sample = False
         if len(windows_batch.shape) == 1:
             single_sample = True
-
-        # Squeeze last dimension
-        windows_batch = np.squeeze(windows_batch)
-        batch_size = len(windows_batch)
+            batch_size = 1
+        else:
+            batch_size = len(windows_batch)
+            
+        minmax_batch_array = self.min_max
 
         # Inverse min-max scaling for each sample
         if single_sample:
@@ -201,14 +199,14 @@ class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
         inverse_scaled_batch = tf.convert_to_tensor(inverse_scaled_batch, dtype=tf.float32)
 
         return inverse_scaled_batch
-    
+        
     def call(self, inputs):
-        windows_batch, minmax_batch_array = inputs
 
         inverse_scaled_batch = tf.py_function(
             self.inverse_normalize_window,
-            [windows_batch, minmax_batch_array],
+            [inputs],
             tf.float32
         )
 
         return inverse_scaled_batch
+
