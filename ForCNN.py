@@ -167,10 +167,8 @@ class ForCNN(tf.keras.Model):
         print(8)
         x = self.dense_output(x)
         print(9)
-        output = self.denormalize_window(x)
-        print(10)
 
-        return output   
+        return self.denormalize_window(x)   
     
 
 
