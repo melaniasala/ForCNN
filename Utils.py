@@ -129,18 +129,10 @@ class TimeSeriesToImageLayer(tfkl.Layer):
 
 
 class NormalizeWindowLayer(tfkl.Layer):
-    def __init__(self, name = 'NormalizeWindowLayer'):
+    def __init__(self, ForCNNinstance, name = 'NormalizeWindowLayer'):
         super(NormalizeWindowLayer, self).__init__(name = name)
-
-    def set_model_instance(self, model_instance):
-        self.model_instance = model_instance
-        self.min_max = self.model_instance.minmax_array
-        return
-
-
-    @tf.function
-    def update_minmax_array(self):
-        self.model_instance.minmax_array = self.min_max
+        self.ForCNNinstance = ForCNNinstance
+        self.min_max = self.ForCNNinstance.minmax_array
 
 
     def normalize_window(self, windows_batch):
@@ -183,14 +175,9 @@ class NormalizeWindowLayer(tfkl.Layer):
 
 class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
         
-    def __init__(self, name = 'InverseNormalizeWindowLayer'):
+    def __init__(self, ForCNNinstance, name = 'InverseNormalizeWindowLayer'):
         super(InverseNormalizeWindowLayer, self).__init__(name = name)
-
-    
-    def set_model_instance(self, model_instance):
-        self.model_instance = model_instance
-        self.min_max = self.model_instance.minmax_array
-
+        self.min_max = ForCNNinstance.minmax_array
 
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
         single_sample = False
