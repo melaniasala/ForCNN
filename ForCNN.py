@@ -123,7 +123,10 @@ class ForCNN(tf.keras.Model):
 
         # Define pre-processing layers
         self.inputs = tfk.Input(shape=(window,), name="input") # TODO: check input shape. No 1 at the end! fix also layer for normalization
-        self.normalize_window = NormalizeWindowLayer(ForCNNinstance= self)
+        self.normalize_window = NormalizeWindowLayer()
+        self.normalize_window.set_model_instance(self)
+        self.normalize_window.update_minmax_array()  
+
         self.to_images = TimeSeriesToImageLayer()
 
         # CNN layers already defined
@@ -144,7 +147,8 @@ class ForCNN(tf.keras.Model):
 
 
         # Define post-processing layers
-        self.denormalize_window = InverseNormalizeWindowLayer(ForCNNinstance= self)
+        self.denormalize_window = InverseNormalizeWindowLayer()
+        self.denormalize_window.set_model_instance(self)
 
 
     def call(self, inputs):

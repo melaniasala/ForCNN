@@ -186,7 +186,7 @@ class NormalizeWindowLayer(tfkl.Layer):
 
 class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
         
-    def __init__(self, ForCNNinstance, name = 'InverseNormalizeWindowLayer'):
+    def __init__(self, name = 'InverseNormalizeWindowLayer'):
         super(InverseNormalizeWindowLayer, self).__init__(name = name)
 
     
