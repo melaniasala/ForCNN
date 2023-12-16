@@ -150,15 +150,25 @@ class ForCNN(tf.keras.Model):
     def call(self, inputs):
         # Define the forward pass in the call method
         x = self.inputs#(inputs) 
+        print(1)
         x = self.normalize_window(x)
+        print(2)
         x = self.to_images(x)
+        print(3)
         x = self.cnn(x)
+        print(4)
         x = self.global_average_pooling(x)
+        print(5)
         x = self.batch_normalization(x)
+        print(6)
         x = self.dense1(x)
+        print(7)
         x = self.dense2(x)
+        print(8)
         x = self.dense_output(x)
+        print(9)
         output = self.denormalize_window(x)
+        print(10)
 
         return output   
     
