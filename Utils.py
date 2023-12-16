@@ -135,15 +135,12 @@ class NormalizeWindowLayer(tfkl.Layer):
     def set_model_instance(self, model_instance):
         self.model_instance = model_instance
         self.min_max = self.model_instance.minmax_array
+        return
 
 
     def update_minmax_array(self):
-        # Access and modify the model attribute as needed
-        if hasattr(self.model_instance, 'minmax_array'):
-            self.model_instance.minmax_array = self.min_max
-        else:
-            # Handle the case where the attribute doesn't exist yet
-            print("Warning: 'minmax_array' not found in the model.")
+        self.model_instance.minmax_array = self.min_max
+        return
 
 
     def normalize_window(self, windows_batch):
@@ -193,6 +190,7 @@ class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
     def set_model_instance(self, model_instance):
         self.model_instance = model_instance
         self.min_max = self.model_instance.minmax_array
+        return
 
 
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
