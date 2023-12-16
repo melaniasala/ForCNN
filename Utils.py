@@ -138,9 +138,9 @@ class NormalizeWindowLayer(tfkl.Layer):
         return
 
 
+    @tf.function
     def update_minmax_array(self):
         self.model_instance.minmax_array = self.min_max
-        return
 
 
     def normalize_window(self, windows_batch):
@@ -190,7 +190,6 @@ class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
     def set_model_instance(self, model_instance):
         self.model_instance = model_instance
         self.min_max = self.model_instance.minmax_array
-        return
 
 
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
