@@ -139,11 +139,11 @@ class NormalizeWindowLayer(tfkl.Layer):
     @tf.function
     def normalize_window(self, windows_batch):
         single_sample = False
-        if len(windows_batch.shape) == 1:
+        if len(tf.shape(windows_batch).numpy()) == 1:
             single_sample = True
             batch_size = 1
         else:
-            batch_size = len(windows_batch)
+            batch_size = tf.shape(windows_batch)[0].numpy()
 
         # For each sample compute min and max value
         if single_sample:
@@ -184,11 +184,11 @@ class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
     @tf.function
     def inverse_normalize_window(self, windows_batch, minmax_batch_array):
         single_sample = False
-        if len(windows_batch.shape) == 1:
+        if len(tf.shape(windows_batch).numpy()) == 1:
             single_sample = True
             batch_size = 1
         else:
-            batch_size = len(windows_batch)
+            batch_size = tf.shape(windows_batch)[0].numpy()
             
         minmax_batch_array = self.min_max
 
@@ -202,6 +202,7 @@ class InverseNormalizeWindowLayer(tf.keras.layers.Layer):
         inverse_scaled_batch = tf.convert_to_tensor(inverse_scaled_batch, dtype=tf.float32)
 
         return inverse_scaled_batch
+    
         
     def call(self, inputs):
 
